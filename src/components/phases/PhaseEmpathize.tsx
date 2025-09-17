@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Search, MessageSquare, Eye, Lightbulb, Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DownloadPDFButton } from "@/components/ui/download-pdf-button";
+import { generatePDF } from "@/utils/pdfGenerator";
+import { sanitizeInput, validateInput, ValidationRules } from "@/utils/inputSanitizer";
 
 interface PhaseEmpathizeProps {
   onComplete: () => void;
@@ -64,6 +67,29 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
     }));
   };
 
+  const isFormValid = Object.values(formData).every(value => {
+    if (Array.isArray(value)) return value.length > 0;
+    return value.trim() !== '';
+  });
+
+  const handleDownloadPDF = () => {
+    const pdfData = {
+      title: 'Fase 2: Empatizar',
+      content: {
+        'Objetivo de Investigación': formData.objetivo,
+        'Usuario Objetivo': formData.usuarioObjetivo,
+        'Técnicas de Investigación': Array.isArray(formData.tecnicas) ? formData.tecnicas.join(', ') : formData.tecnicas,
+        'Preguntas Clave para Entrevistas': formData.preguntas,
+        'Frustraciones Identificadas': formData.frustraciones,
+        'Insight Positivo': formData.insightPositivo,
+        'Meta-Insight (Necesidad Profunda)': formData.metaInsight
+      }
+    };
+
+    const doc = generatePDF(pdfData);
+    doc.save(`empatizar-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -91,7 +117,10 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
                 id="objetivo"
                 placeholder="ej. Entender por qué los estudiantes abandonan la universidad en primer año y qué factores podrían motivarlos a continuar..."
                 value={formData.objetivo}
-                onChange={(e) => setFormData(prev => ({ ...prev, objetivo: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    objetivo: sanitizeInput(e.target.value, { maxLength: 2000 })
+                  }))}
                 className="mt-2 min-h-24"
               />
             </CardContent>
@@ -110,7 +139,10 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
                 id="usuarioObjetivo"
                 placeholder="ej. Estudiantes de 18-20 años que dejaron la universidad en primer año, padres de familia trabajadores con hijos pequeños, adultos mayores que viven solos..."
                 value={formData.usuarioObjetivo}
-                onChange={(e) => setFormData(prev => ({ ...prev, usuarioObjetivo: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    usuarioObjetivo: sanitizeInput(e.target.value, { maxLength: 2000 })
+                  }))}
                 className="mt-2 min-h-24"
               />
             </CardContent>
@@ -169,7 +201,10 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
 4. ¿Qué tipo de apoyo recibiste y cuál necesitabas?
 5. Si pudieras cambiar algo de tu experiencia, ¿qué sería?"
               value={formData.preguntas}
-              onChange={(e) => setFormData(prev => ({ ...prev, preguntas: e.target.value }))}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                preguntas: sanitizeInput(e.target.value, { maxLength: 5000 })
+              }))}
               className="min-h-32"
             />
           </CardContent>
@@ -193,7 +228,10 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
 2. La carga de trabajo es abrumadora sin herramientas de organización
 3. Falta de conexión social hace que se sientan aislados"
                 value={formData.frustraciones}
-                onChange={(e) => setFormData(prev => ({ ...prev, frustraciones: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  frustraciones: sanitizeInput(e.target.value, { maxLength: 2000 })
+                }))}
                 className="min-h-24"
               />
             </CardContent>
@@ -210,7 +248,10 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
               <Textarea
                 placeholder="ej. Valoran mucho los momentos de aprendizaje práctico donde pueden aplicar lo que estudian a situaciones reales"
                 value={formData.insightPositivo}
-                onChange={(e) => setFormData(prev => ({ ...prev, insightPositivo: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  insightPositivo: sanitizeInput(e.target.value, { maxLength: 2000 })
+                }))}
                 className="min-h-20"
               />
             </CardContent>
@@ -227,14 +268,22 @@ export const PhaseEmpathize = ({ onComplete }: PhaseEmpathizeProps) => {
               <Textarea
                 placeholder="ej. Necesitan sentir que pertenecen a una comunidad que los apoya en su crecimiento personal y profesional"
                 value={formData.metaInsight}
-                onChange={(e) => setFormData(prev => ({ ...prev, metaInsight: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  metaInsight: sanitizeInput(e.target.value, { maxLength: 2000 })
+                }))}
                 className="min-h-20"
               />
             </CardContent>
           </Card>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <DownloadPDFButton
+            isFormValid={isFormValid}
+            onDownload={handleDownloadPDF}
+            phaseName="Empatizar"
+          />
           <Button 
             type="submit" 
             size="lg" 

@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Building, Target, History, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DownloadPDFButton } from "@/components/ui/download-pdf-button";
+import { generatePDF } from "@/utils/pdfGenerator";
+import { sanitizeInput, validateInput, ValidationRules } from "@/utils/inputSanitizer";
 
 interface PhaseContextProps {
   onComplete: () => void;
@@ -40,10 +43,29 @@ export const PhaseContext = ({ onComplete }: PhaseContextProps) => {
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Sanitize input as user types
+    const sanitizedValue = sanitizeInput(value, { maxLength: 5000 });
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: sanitizedValue
     }));
+  };
+
+  const isFormValid = Object.values(formData).every(value => value.trim() !== '');
+
+  const handleDownloadPDF = () => {
+    const pdfData = {
+      title: 'Fase 1: Contexto Empresarial',
+      content: {
+        'Nombre de la Empresa': formData.empresa,
+        'Industria': formData.industria,
+        'Historia y Modelo de Negocio': formData.historia,
+        'Desafío Principal': formData.desafio
+      }
+    };
+
+    const doc = generatePDF(pdfData);
+    doc.save(`contexto-empresarial-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -172,7 +194,12 @@ export const PhaseContext = ({ onComplete }: PhaseContextProps) => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <DownloadPDFButton
+            isFormValid={isFormValid}
+            onDownload={handleDownloadPDF}
+            phaseName="Contexto Empresarial"
+          />
           <Button 
             type="submit" 
             size="lg" 

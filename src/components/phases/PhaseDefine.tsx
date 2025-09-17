@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { User, Target, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DownloadPDFButton } from "@/components/ui/download-pdf-button";
+import { generatePDF } from "@/utils/pdfGenerator";
+import { sanitizeInput, validateInput, ValidationRules } from "@/utils/inputSanitizer";
 
 interface PhaseDefineProps {
   onComplete: () => void;
@@ -49,10 +52,42 @@ export const PhaseDefine = ({ onComplete }: PhaseDefineProps) => {
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Sanitize input as user types with appropriate length limits
+    let maxLength = 2000; // default
+    if (field.includes('Nombre') || field.includes('Ocupacion')) maxLength = 200;
+    if (field.includes('Edad')) maxLength = 3;
+    
+    const sanitizedValue = sanitizeInput(value, { maxLength });
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: sanitizedValue
     }));
+  };
+
+  const isFormValid = Object.values(formData).filter((value, index) => {
+    const keys = Object.keys(formData);
+    return keys[index] !== 'personaEdad'; // personaEdad no es obligatorio
+  }).every(value => value.trim() !== '');
+
+  const handleDownloadPDF = () => {
+    const pdfData = {
+      title: 'Fase 3: Definir',
+      content: {
+        'Persona - Nombre': formData.personaNombre,
+        'Persona - Edad': formData.personaEdad || 'No especificada',
+        'Persona - Ocupación': formData.personaOcupacion,
+        'Persona - Motivaciones': formData.personaMotivaciones,
+        'Persona - Frustraciones': formData.personaFrustraciones,
+        'Persona - Cita Representativa': formData.personaCita,
+        'Point of View (POV)': formData.pointOfView,
+        'How Might We #1': formData.hmw1,
+        'How Might We #2': formData.hmw2,
+        'How Might We #3': formData.hmw3
+      }
+    };
+
+    const doc = generatePDF(pdfData);
+    doc.save(`definir-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -245,7 +280,12 @@ export const PhaseDefine = ({ onComplete }: PhaseDefineProps) => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <DownloadPDFButton
+            isFormValid={isFormValid}
+            onDownload={handleDownloadPDF}
+            phaseName="Definir"
+          />
           <Button 
             type="submit" 
             size="lg" 

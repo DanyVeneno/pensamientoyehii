@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TestTube, Users, Clipboard, AlertTriangle, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DownloadPDFButton } from "@/components/ui/download-pdf-button";
+import { generatePDF } from "@/utils/pdfGenerator";
+import { sanitizeInput, validateInput, ValidationRules } from "@/utils/inputSanitizer";
 
 interface PhaseTestProps {
   onComplete: () => void;
@@ -48,10 +51,33 @@ export const PhaseTest = ({ onComplete }: PhaseTestProps) => {
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Sanitize input as user types
+    const sanitizedValue = sanitizeInput(value, { maxLength: 5000 });
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: sanitizedValue
     }));
+  };
+
+  const isFormValid = Object.values(formData).every(value => value.trim() !== '');
+
+  const handleDownloadPDF = () => {
+    const pdfData = {
+      title: 'Fase 6: Testear',
+      content: {
+        'Plan de Testeo - Prototipo #1 - Método': formData.metodo1,
+        'Plan de Testeo - Prototipo #1 - Tareas': formData.tareas1,
+        'Plan de Testeo - Prototipo #1 - Feedback Esperado': formData.feedback1,
+        'Plan de Testeo - Prototipo #2 - Método': formData.metodo2,
+        'Plan de Testeo - Prototipo #2 - Tareas': formData.tareas2,
+        'Plan de Testeo - Prototipo #2 - Feedback Esperado': formData.feedback2,
+        'Feedback Negativo Posible': formData.feedbackNegativo,
+        'Iteración para Mejorar': formData.iteracion
+      }
+    };
+
+    const doc = generatePDF(pdfData);
+    doc.save(`testear-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -233,7 +259,12 @@ export const PhaseTest = ({ onComplete }: PhaseTestProps) => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <DownloadPDFButton
+            isFormValid={isFormValid}
+            onDownload={handleDownloadPDF}
+            phaseName="Testear"
+          />
           <Button 
             type="submit" 
             size="lg" 
